@@ -1,0 +1,533 @@
+local delay = 0.4
+local player = game.Players.LocalPlayer
+
+-- ========== GUI FULLSCREEN (AUTO FISHING) ==========
+local sg
+local success = pcall(function()
+    sg = Instance.new("ScreenGui", game:GetService("CoreGui"))
+end)
+if not success then
+    sg = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+end
+sg.Name = "FishingPanel"
+sg.ResetOnSpawn = false
+sg.IgnoreGuiInset = true
+sg.DisplayOrder = 9999
+
+local bg = Instance.new("Frame", sg)
+bg.Size = UDim2.new(1, 0, 1, 0)
+bg.Position = UDim2.new(0, 0, 0, 0)
+bg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+bg.BackgroundTransparency = 0
+bg.BorderSizePixel = 0
+bg.ZIndex = 9999
+
+local panel = Instance.new("Frame", bg)
+panel.Size = UDim2.new(0, 340, 0, 290)
+panel.Position = UDim2.new(0.5, -170, 0.5, -145)
+panel.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+panel.BorderSizePixel = 0
+panel.ZIndex = 10000
+Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 12)
+
+local stroke = Instance.new("UIStroke", panel)
+stroke.Color = Color3.fromRGB(0, 200, 80)
+stroke.Thickness = 1.5
+
+local title = Instance.new("TextLabel", panel)
+title.Size = UDim2.new(1, 0, 0, 44)
+title.BackgroundTransparency = 1
+title.Text = "🎣 AUTO FISHING"
+title.TextColor3 = Color3.fromRGB(0, 220, 80)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.ZIndex = 10001
+
+local div1 = Instance.new("Frame", panel)
+div1.Size = UDim2.new(1, -40, 0, 1)
+div1.Position = UDim2.new(0, 20, 0, 46)
+div1.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
+div1.BackgroundTransparency = 0.5
+div1.BorderSizePixel = 0
+div1.ZIndex = 10001
+
+local function makeLabel(yPos, defaultText, color, size)
+    local lbl = Instance.new("TextLabel", panel)
+    lbl.Size = UDim2.new(1, -40, 0, 28)
+    lbl.Position = UDim2.new(0, 20, 0, yPos)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = defaultText
+    lbl.TextColor3 = color or Color3.new(1, 1, 1)
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = size or 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.ZIndex = 10001
+    return lbl
+end
+
+local statusLabel = makeLabel(54,  "⏳ Memulai...",          Color3.fromRGB(255, 210, 80), 14)
+local fishLabel   = makeLabel(86,  "🐟 Ikan tertangkap: 0",  Color3.fromRGB(100, 220, 255))
+local sellLabel   = makeLabel(114, "💰 Total dijual: 0x",    Color3.fromRGB(100, 220, 255))
+local timerLabel  = makeLabel(142, "⏱ Jual berikutnya: 60s", Color3.fromRGB(160, 160, 160), 12)
+local uptimeLabel = makeLabel(166, "🕐 Uptime: 00:00",       Color3.fromRGB(160, 160, 160), 12)
+local remoteLabel = makeLabel(190, "🔍 Mencari remote...",   Color3.fromRGB(160, 160, 160), 11)
+
+local div2 = Instance.new("Frame", panel)
+div2.Size = UDim2.new(1, -40, 0, 1)
+div2.Position = UDim2.new(0, 20, 0, 224)
+div2.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
+div2.BackgroundTransparency = 0.5
+div2.BorderSizePixel = 0
+div2.ZIndex = 10001
+
+local stopBtn = Instance.new("TextButton", panel)
+stopBtn.Size = UDim2.new(0.45, 0, 0, 34)
+stopBtn.Position = UDim2.new(0, 20, 0, 234)
+stopBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+stopBtn.Text = "⏹ Stop"
+stopBtn.TextColor3 = Color3.new(1, 1, 1)
+stopBtn.Font = Enum.Font.GothamBold
+stopBtn.TextSize = 13
+stopBtn.ZIndex = 10001
+Instance.new("UICorner", stopBtn).CornerRadius = UDim.new(0, 8)
+
+local minBtn = Instance.new("TextButton", panel)
+minBtn.Size = UDim2.new(0.45, 0, 0, 34)
+minBtn.Position = UDim2.new(0.55, -20, 0, 234)
+minBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+minBtn.Text = "— Minimize"
+minBtn.TextColor3 = Color3.new(1, 1, 1)
+minBtn.Font = Enum.Font.GothamBold
+minBtn.TextSize = 13
+minBtn.ZIndex = 10001
+Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UIStroke", minBtn).Color = Color3.fromRGB(80, 80, 80)
+
+local miniBtn = Instance.new("TextButton", sg)
+miniBtn.Size = UDim2.new(0, 54, 0, 54)
+miniBtn.Position = UDim2.new(0, 10, 0.5, -27)
+miniBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+miniBtn.Text = "🎣"
+miniBtn.TextSize = 24
+miniBtn.Font = Enum.Font.GothamBold
+miniBtn.TextColor3 = Color3.fromRGB(0, 220, 80)
+miniBtn.Visible = false
+miniBtn.ZIndex = 10002
+Instance.new("UICorner", miniBtn).CornerRadius = UDim.new(0, 10)
+Instance.new("UIStroke", miniBtn).Color = Color3.fromRGB(0, 200, 80)
+
+minBtn.MouseButton1Click:Connect(function()
+    bg.Visible = false
+    miniBtn.Visible = true
+end)
+miniBtn.MouseButton1Click:Connect(function()
+    bg.Visible = true
+    miniBtn.Visible = false
+end)
+
+local function setStatus(text, color)
+    statusLabel.Text = text
+    statusLabel.TextColor3 = color or Color3.fromRGB(255, 210, 80)
+end
+
+-- ========== REMOTE SETUP ==========
+local netFolder = game:GetService("ReplicatedStorage")
+    :WaitForChild("Packages"):WaitForChild("_Index")
+    :WaitForChild("sleitnick_net@0.2.0"):WaitForChild("net")
+
+local remote_EventExport = game:GetService("ReplicatedStorage")
+    :WaitForChild("Modules"):WaitForChild("Gamebeast"):WaitForChild("Infra")
+    :WaitForChild("Shared"):WaitForChild("Modules"):WaitForChild("GetRemote")
+    :WaitForChild("Remotes"):WaitForChild("EventExportClientMetrics")
+
+local function findRFAfter(anchorName)
+    local found = false
+    for _, obj in ipairs(netFolder:GetChildren()) do
+        if obj:IsA("RemoteFunction") then
+            if obj.Name == anchorName then
+                found = true
+            elseif found then
+                local nama = string.sub(obj.Name, 4)
+                if #nama > 5 and string.find(nama, "[%p%s]") then
+                    return obj
+                end
+            end
+        end
+    end
+    return nil
+end
+
+local function findREAfter(anchorName)
+    local found = false
+    for _, obj in ipairs(netFolder:GetChildren()) do
+        if obj:IsA("RemoteEvent") then
+            if obj.Name == anchorName then
+                found = true
+            elseif found and string.sub(obj.Name, 1, 3) == "RE/" then
+                local nama = string.sub(obj.Name, 4)
+                if #nama > 10 and string.find(nama, "[%p%s]") then
+                    return obj
+                end
+            end
+        end
+    end
+    return nil
+end
+
+task.wait(3)
+
+setStatus("🔍 Mencari remote...")
+local remote_equip = findREAfter("RE/EquipToolFromHotbar")
+local rf_cast      = findRFAfter("RF/ChargeFishingRod")
+local rf_arg       = findRFAfter("RF/RequestFishingMinigameStarted")
+local rf_reel      = findRFAfter("RF/CatchFishCompleted")
+local rf_sell      = findRFAfter("RF/SellAllItems")
+
+if not remote_equip or not rf_cast or not rf_arg or not rf_reel or not rf_sell then
+    setStatus("❌ Remote tidak ditemukan!", Color3.fromRGB(255, 80, 80))
+    return
+end
+
+remoteLabel.Text = "✅ Semua remote ditemukan"
+remoteLabel.TextColor3 = Color3.fromRGB(0, 200, 80)
+
+-- ========== 1. TELEPORT ==========
+setStatus("🗺️ Teleporting...")
+local char = player.Character or player.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+hrp.CFrame = CFrame.new(-3650.496, -279.074, -1619.167) * CFrame.Angles(0, -0.757963, 0)
+task.wait(2)
+
+-- ========== 2. EQUIP PANCING ==========
+setStatus("🎣 Equip pancing...")
+remote_equip:FireServer(1)
+task.wait(0.41)
+remote_EventExport:FireServer({
+    ["Ping"]       = {[1]=0.026,[2]=0.026,[3]=0.026,[4]=0.026,[5]=0.026,
+                      [6]=0.026,[7]=0.026,[8]=0.026,[9]=0.026,[10]=0.026},
+    ["PhysicsFps"] = {[1]=60,[2]=60,[3]=60,[4]=60,[5]=60,
+                      [6]=60,[7]=60,[8]=60,[9]=60,[10]=60}
+})
+task.wait(1)
+
+-- ========== 3. FPS BOOST OTOMATIS ==========
+setStatus("⚡ Mengaktifkan FPS Boost...", Color3.fromRGB(255, 180, 0))
+
+local playerGui = player:WaitForChild("PlayerGui")
+local Lighting = game:GetService("Lighting")
+
+do
+    local character = player.Character or player.CharacterAdded:Wait()
+    local hrp2 = character:FindFirstChild("HumanoidRootPart")
+
+    -- 1. HIDE ISLAND
+    local pos = hrp2.CFrame
+    local platform = Instance.new("Part")
+    platform.Size = Vector3.new(2000, 1, 2000)
+    platform.Position = Vector3.new(pos.X, pos.Y - 5, pos.Z)
+    platform.Anchored = true
+    platform.Transparency = 1
+    platform.CanCollide = true
+    platform.Parent = workspace
+
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and not obj:IsDescendantOf(character) and obj ~= platform then
+            obj.Transparency = 1
+            obj.CanCollide = false
+        end
+    end
+    hrp2.CFrame = pos
+
+    -- 2. STOP ANIMATION
+    local humanoid = character:FindFirstChild("Humanoid")
+    if humanoid then
+        for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+            track:Stop()
+            track:Destroy()
+        end
+        for _, obj in pairs(character:GetDescendants()) do
+            if obj:IsA("Animator") then obj:Destroy() end
+        end
+    end
+
+    -- 3. HIDE FISH + NOTIFICATIONS
+    for _, gui in pairs(playerGui:GetChildren()) do
+        if gui.Name:lower():find("notification") then
+            gui:Destroy()
+        end
+    end
+
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj.Name:lower():find("fish") then
+            obj:Destroy()
+        end
+    end
+
+    playerGui.ChildAdded:Connect(function(gui)
+        if gui.Name:lower():find("notification") then
+            gui:Destroy()
+        end
+    end)
+
+    workspace.DescendantAdded:Connect(function(obj)
+        if obj:IsA("Model") and obj.Name:lower():find("fish") then
+            obj:Destroy()
+        end
+    end)
+
+    -- 4. HIDE WATER
+    local Terrain = workspace:FindFirstChildOfClass("Terrain")
+    if Terrain then
+        Terrain.WaterTransparency = 1
+        Terrain.WaterWaveSize = 0
+        Terrain.WaterWaveSpeed = 0
+        Terrain.WaterReflectance = 0
+    end
+
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and obj.Material == Enum.Material.Water then
+            obj.Transparency = 1
+            obj.CanCollide = false
+        end
+    end
+
+    -- 5. CUBE CHARACTER
+    for _, part in pairs(character:GetDescendants()) do
+        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+            part.Transparency = 1
+        end
+        if part:IsA("Accessory") or part:IsA("Decal") or part:IsA("Face") then
+            part:Destroy()
+        end
+    end
+
+    if hrp2 then
+        hrp2.Transparency = 0
+        hrp2.Size = Vector3.new(2, 2, 2)
+        hrp2.BrickColor = BrickColor.new("Medium stone grey")
+    end
+
+    -- 6. GRAYSCALE + NO LIGHT + NO PARTICLES
+    Lighting.Brightness = 0
+    Lighting.GlobalShadows = false
+    Lighting.OutdoorAmbient = Color3.new(0.5, 0.5, 0.5)
+    Lighting.Ambient = Color3.new(0.5, 0.5, 0.5)
+    Lighting.ColorShift_Bottom = Color3.new(0, 0, 0)
+    Lighting.ColorShift_Top = Color3.new(0, 0, 0)
+    Lighting.FogEnd = 999999
+    Lighting.ClockTime = 12
+
+    for _, obj in pairs(Lighting:GetChildren()) do
+        if obj:IsA("Sky") or obj:IsA("BloomEffect") or obj:IsA("BlurEffect") or
+           obj:IsA("SunRaysEffect") or obj:IsA("DepthOfFieldEffect") or
+           obj:IsA("Atmosphere") or obj:IsA("ColorCorrectionEffect") then
+            obj:Destroy()
+        end
+    end
+
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Beam") or
+           obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") then
+            obj:Destroy()
+        end
+    end
+
+    workspace.DescendantAdded:Connect(function(obj)
+        if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Beam") or
+           obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") then
+            obj:Destroy()
+        end
+    end)
+
+    local colorCorrection = Instance.new("ColorCorrectionEffect")
+    colorCorrection.Parent = Lighting
+    colorCorrection.Saturation = -1
+    colorCorrection.Contrast = 0
+    colorCorrection.Brightness = 0
+    colorCorrection.TintColor = Color3.fromRGB(128, 128, 128)
+
+    -- 7. PERFORMANCE SETTINGS
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+
+    print("✓ FPS BOOST ACTIVE - All optimizations applied")
+end
+
+-- ========== SEMBUNYIKAN PLAYER LAIN ==========
+setStatus("👥 Menyembunyikan player lain...", Color3.fromRGB(180, 180, 255))
+
+local function hideCharacter(otherChar)
+    if not otherChar then return end
+
+    -- Sembunyikan semua BasePart & Decal
+    for _, part in pairs(otherChar:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Transparency = 1
+            part.CastShadow = false
+        elseif part:IsA("Decal") or part:IsA("Texture") then
+            part.Transparency = 1
+        elseif part:IsA("BillboardGui") or part:IsA("SurfaceGui") then
+            part.Enabled = false
+        elseif part:IsA("ParticleEmitter") or part:IsA("Trail") or
+               part:IsA("Beam") or part:IsA("Fire") or
+               part:IsA("Smoke") or part:IsA("Sparkles") then
+            part.Enabled = false
+        end
+    end
+
+    -- Sembunyikan nameplate
+    local humanoid = otherChar:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+        humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+    end
+end
+
+local function hookPlayer(otherPlayer)
+    if otherPlayer == player then return end
+
+    -- Hide karakter saat ini
+    if otherPlayer.Character then
+        hideCharacter(otherPlayer.Character)
+    end
+
+    -- Hook CharacterAdded agar hide otomatis saat respawn
+    otherPlayer.CharacterAdded:Connect(function(newChar)
+        -- Tunggu karakter fully loaded
+        newChar:WaitForChild("HumanoidRootPart", 5)
+        task.wait(0.2)
+        hideCharacter(newChar)
+        -- Re-apply setelah beberapa detik (kadang part load telat)
+        task.wait(1)
+        hideCharacter(newChar)
+    end)
+end
+
+-- Hook semua player yang sudah ada
+for _, otherPlayer in pairs(game.Players:GetPlayers()) do
+    hookPlayer(otherPlayer)
+end
+
+-- Hook player yang join setelahnya
+game.Players.PlayerAdded:Connect(function(otherPlayer)
+    hookPlayer(otherPlayer)
+end)
+
+-- Loop berkala setiap 3 detik untuk re-hide (mengatasi part yang load telat)
+task.spawn(function()
+    while true do
+        for _, otherPlayer in pairs(game.Players:GetPlayers()) do
+            if otherPlayer ~= player and otherPlayer.Character then
+                hideCharacter(otherPlayer.Character)
+            end
+        end
+        task.wait(3)
+    end
+end)
+
+print("✓ Semua player lain disembunyikan")
+
+-- ========== ANTI AFK ==========
+local VirtualUser = game:GetService("VirtualUser")
+
+game.Players.LocalPlayer.Idled:Connect(function()
+    VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+    task.wait(1)
+    VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+    print("✓ Anti-AFK triggered")
+end)
+
+print("✓ Anti-AFK aktif")
+
+-- ========== 4. FISHING LOOP ==========
+local running = true
+stopBtn.MouseButton1Click:Connect(function()
+    running = false
+    setStatus("⏹ Dihentikan", Color3.fromRGB(255, 80, 80))
+    stopBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    stopBtn.Text = "Stopped"
+end)
+
+local lastSellTime   = tick()
+local lastExportTime = tick()
+local startTime      = tick()
+local fishCount      = 0
+local sellCount      = 0
+
+task.spawn(function()
+    while running do
+        local nextSell = math.max(0, 60 - math.floor(tick() - lastSellTime))
+        local uptime   = math.floor(tick() - startTime)
+        timerLabel.Text = "⏱ Jual berikutnya: " .. nextSell .. "s"
+        uptimeLabel.Text = string.format("🕐 Uptime: %02d:%02d", math.floor(uptime/60), uptime%60)
+        task.wait(1)
+    end
+end)
+
+while running do
+    setStatus("🎣 Melempar kail...", Color3.fromRGB(100, 200, 255))
+    rf_cast:InvokeServer(nil, nil, tick())
+    task.wait(delay)
+
+    rf_arg:InvokeServer(-1.233, 1, tick())
+    task.wait(delay)
+
+    setStatus("🐟 Menarik ikan...", Color3.fromRGB(100, 255, 150))
+    rf_reel:InvokeServer()
+    task.wait(delay)
+
+    fishCount = fishCount + 1
+    fishLabel.Text = "🐟 Ikan tertangkap: " .. fishCount
+
+    if tick() - lastExportTime >= 5 then
+        remote_EventExport:FireServer({
+            ["Ping"]       = {[1]=0.024,[2]=0.024,[3]=0.024,[4]=0.024,[5]=0.024,
+                              [6]=0.024,[7]=0.024,[8]=0.024,[9]=0.024,[10]=0.024},
+            ["PhysicsFps"] = {[1]=57.3,[2]=57.5,[3]=57.1,[4]=60,[5]=60,
+                              [6]=60,[7]=60,[8]=57.6,[9]=56.9,[10]=58.5}
+        })
+        lastExportTime = tick()
+    end
+
+    if tick() - lastSellTime >= 60 then
+        setStatus("💰 Menjual...", Color3.fromRGB(255, 210, 80))
+        lastSellTime = tick()
+
+        -- Jalankan jual di thread terpisah agar tidak blocking fishing loop
+        task.spawn(function()
+            local sellDone = false
+
+            -- Thread jual dengan pcall agar tidak stuck jika server lambat reply
+            task.spawn(function()
+                local ok, result = pcall(function()
+                    return rf_sell:InvokeServer()
+                end)
+                if ok then
+                    print("✅ Jual berhasil: " .. tostring(result))
+                else
+                    warn("❌ Jual error: " .. tostring(result))
+                end
+                sellDone = true
+            end)
+
+            -- Timeout maksimal 5 detik, jika lewat tetap lanjut
+            local elapsed = 0
+            while not sellDone and elapsed < 5 do
+                task.wait(0.5)
+                elapsed = elapsed + 0.5
+            end
+
+            if not sellDone then
+                warn("⚠️ Jual timeout, melanjutkan fishing...")
+            end
+
+            remote_EventExport:FireServer({
+                ["Ping"]       = {[1]=0.024,[2]=0.024,[3]=0.024,[4]=0.024,[5]=0.026,
+                                  [6]=0.026,[7]=0.026,[8]=0.026,[9]=0.026,[10]=0.027},
+                ["PhysicsFps"] = {[1]=60,[2]=60,[3]=60,[4]=60,[5]=58.2,
+                                  [6]=58.1,[7]=60,[8]=58.2,[9]=58.0,[10]=60}
+            })
+            sellCount = sellCount + 1
+            sellLabel.Text = "💰 Total dijual: " .. sellCount .. "x"
+        end)
+    end
+end
